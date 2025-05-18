@@ -5,6 +5,7 @@ const config = {
   type: Phaser.AUTO,
   width: 800,
   height: 600,
+  pixelArt: true,
   parent: "game-container",
   scene: [Start],
   physics: {
@@ -15,7 +16,7 @@ const config = {
     },
   },
   scale: {
-    mode: Phaser.Scale.NONE,
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     width: 800,
     height: 600,

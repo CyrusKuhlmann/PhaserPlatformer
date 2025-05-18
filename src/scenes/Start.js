@@ -1,5 +1,15 @@
 import * as Phaser from "phaser";
 
+import sky from "/assets/sprites/sky.png";
+import platform from "/assets/sprites/platform.png";
+import star from "/assets/sprites/star.png";
+import bomb from "/assets/sprites/bomb.png";
+import dude from "/assets/sprites/dude.png";
+
+import bounce from "/assets/sounds/bounce.mp3";
+import collect from "/assets/sounds/collect.mp3";
+import gameover from "/assets/sounds/gameover.mp3";
+
 export class Start extends Phaser.Scene {
   constructor() {
     super("Start");
@@ -8,17 +18,17 @@ export class Start extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image("sky", "assets/sky.png");
-    this.load.image("ground", "assets/platform.png");
-    this.load.image("star", "assets/star.png");
-    this.load.image("bomb", "assets/bomb.png");
-    this.load.spritesheet("dude", "assets/dude.png", {
+    this.load.image("sky", sky);
+    this.load.image("ground", platform);
+    this.load.image("star", star);
+    this.load.image("bomb", bomb);
+    this.load.spritesheet("dude", dude, {
       frameWidth: 32,
       frameHeight: 48,
     });
-    this.load.audio("bounce", "assets/bounce.mp3");
-    this.load.audio("collect", "assets/collect.mp3");
-    this.load.audio("gameover", "assets/gameover.mp3");
+    this.load.audio("bounce", bounce);
+    this.load.audio("collect", collect);
+    this.load.audio("gameover", gameover);
   }
 
   create() {
@@ -67,6 +77,7 @@ export class Start extends Phaser.Scene {
 
     //  Input Events
     this.cursors = this.input.keyboard.createCursorKeys();
+    this.input.setDefaultCursor("grab");
 
     //  Some this.stars to collect, 12 in total, evenly spaced 70 pixels apart along the x axis
     this.stars = this.physics.add.group({
