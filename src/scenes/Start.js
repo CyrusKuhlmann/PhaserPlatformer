@@ -82,7 +82,7 @@ export class Start extends Phaser.Scene {
 
     this.bombs = this.physics.add.group();
 
-    //  The this.score
+    //  The score
     this.scoreText = this.add.text(16, 16, "Score: 0", {
       fontSize: "32px",
       fill: "#000",
@@ -141,7 +141,7 @@ export class Start extends Phaser.Scene {
 
     //  Add and update the score
     this.score += 10;
-    this.scoreText.setText("this.score: " + this.score);
+    this.scoreText.setText("Score: " + this.score);
     this.sound.play("collect");
 
     if (this.stars.countActive(true) === 0) {
