@@ -1,13 +1,13 @@
 import * as Phaser from "phaser";
-import { Start } from "./scenes/Start.js";
+import { Game } from "./scenes/Game.js";
 
 const config = {
   type: Phaser.AUTO,
-  width: 800,
-  height: 600,
+  width: 240,
+  height: 160,
   pixelArt: true,
   parent: "game-container",
-  scene: [Start],
+  scene: [Game],
   physics: {
     default: "arcade",
     arcade: {
@@ -18,8 +18,6 @@ const config = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 800,
-    height: 600,
   },
 };
 
