@@ -3,8 +3,9 @@ import { Game } from "./scenes/Game.js";
 
 const config = {
   type: Phaser.AUTO,
-  width: 240,
-  height: 160,
+  width: 640,
+  height: 400,
+  backgroundColor: "#87CEEB", // sky blue
   pixelArt: true,
   parent: "game-container",
   scene: [Game],
@@ -12,7 +13,7 @@ const config = {
     default: "arcade",
     arcade: {
       gravity: { y: 300 },
-      debug: false,
+      debug: true,
     },
   },
   scale: {
