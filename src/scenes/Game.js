@@ -44,6 +44,8 @@ export class Game extends Phaser.Scene {
     const treeAssets = level.addTilesetImage("null", "treeAssets");
     const tilesets = [tiles, background, greenTree, treeAssets];
     this.attacking = false;
+    this.dashing = false;
+
 
 
     // Create layers
@@ -73,6 +75,17 @@ export class Game extends Phaser.Scene {
       .setBounce(0)
       .setScale(1)
       .setCollideWorldBounds(true);
+
+    this.weaponHitbox = this.physics.add
+      .sprite(this.hero.x + 17.5, this.hero.y - 40, null)
+      .setSize(20, 30)
+      .setOrigin(.5, .5)
+      .setVisible(false)
+      .setImmovable(true);
+
+    this.weaponHitbox.body.allowGravity = false;
+
+
 
     // Set the hero's bounding box
     this.hero.body.setSize(33, 46).setOffset(41, 24);
@@ -131,6 +144,12 @@ export class Game extends Phaser.Scene {
       frameRate: 10,
       repeat: 0,
     });
+    this.anims.create({
+      key: "dash",
+      frames: this.anims.generateFrameNumbers("viking", { start: 286, end: 290 }),
+      frameRate: 15,
+      repeat: 0,
+    });
 
     this.physics.add.collider(this.hero, ground);
 
@@ -160,7 +179,6 @@ export class Game extends Phaser.Scene {
     this.hero.on("animationcomplete", () => {
       // Reset attacking state when any animation completes
       this.attacking = false;
-      console.log("Animation completed, attacking reset to false");
     });
 
 
@@ -168,13 +186,55 @@ export class Game extends Phaser.Scene {
     this.input.keyboard.on("keydown-X", () => {
       this.attacking = true;
       const attackNum = Phaser.Math.Between(1, 3);
-      this.hero.anims.play(`attack${attackNum}`, true);
-      console.log("Attack animation played");
+      if (!this.hero.body.blocked.down) {
+        this.hero.anims.play("attack3", true)
+      }
+      else {
+        this.hero.anims.play(`attack${attackNum}`, true);
+      }
+      if (this.hero.flipX) {
+        this.hero.setVelocityX(-50)
+        this.weaponHitbox.setVelocityX(-50);
+      }
+      else {
+        this.hero.setVelocityX(50)
+        this.weaponHitbox.setVelocityX(50);
+      }
+      // Enable and position the weapon hitbox
+      this.weaponHitbox.setVisible(false);
+      this.weaponHitbox.body.enable = true;
+      this.weaponHitbox.x = this.hero.x + (this.hero.flipX ? -17.5 : 17.5);
+      this.weaponHitbox.y = this.hero.y - 40;
+    });
+
+    // ...when attack animation completes, hide and disable the hitbox...
+    this.hero.on("animationcomplete", (animation, frame) => {
+      if (animation.key.startsWith("attack")) {
+        this.weaponHitbox.setVisible(false);
+        this.weaponHitbox.body.enable = false;
+        this.weaponHitbox.setVelocityX(0);
+        this.attacking = false;
+      }
+      else if (animation.key === "dash") {
+        this.dashing = false;
+        this.hero.setVelocityX(0);
+      }
+    });
+
+    this.input.keyboard.on("keydown-C", () => {
+      this.dashing = true;
+      this.hero.anims.play("dash", true);
+      if (this.hero.flipX) {
+        this.hero.setVelocityX(-150);
+      }
+      else {
+        this.hero.setVelocityX(150);
+      }
     });
   }
 
   update() {
-    if (this.cursors.left.isDown) {
+    if (this.cursors.left.isDown && !this.dashing) {
       if (this.shift.isDown) { // Check if Shift is pressed
         this.hero.setVelocityX(-200);
         this.hero.flipX = true;
@@ -184,11 +244,11 @@ export class Game extends Phaser.Scene {
       } else {
         this.hero.setVelocityX(-100);
         this.hero.flipX = true;
-        if (this.hero.body.blocked.down && !this.attacking) {
+        if (this.hero.body.blocked.down && !this.attacking && !this.dashing) {
           this.hero.anims.play("walk", true);
         }
       }
-    } else if (this.cursors.right.isDown) {
+    } else if (this.cursors.right.isDown && !this.dashing) {
       if (this.shift.isDown) { // Check if Shift is pressed
         this.hero.setVelocityX(200);
         this.hero.flipX = false;
@@ -198,21 +258,21 @@ export class Game extends Phaser.Scene {
       } else {
         this.hero.setVelocityX(100);
         this.hero.flipX = false;
-        if (this.hero.body.blocked.down && !this.attacking) {
+        if (this.hero.body.blocked.down && !this.attacking && !this.dashing) {
           this.hero.anims.play("walk", true);
         }
       }
     } else {
-      if (!this.attacking) {
+      if (!this.attacking && !this.dashing) {
         this.hero.setVelocityX(0);
         this.hero.anims.play("idle", true);
       }
     }
     if (this.Z.isDown && this.hero.body.blocked.down) {
-      this.hero.setVelocityY(-250);
+      this.hero.setVelocityY(-227.5);
       this.sound.play("bounce");
     }
-    if (!this.hero.body.blocked.down && !this.attacking) {
+    if (!this.hero.body.blocked.down && !this.attacking && !this.dashing) {
       if (this.hero.body.velocity.y < -20) {
         this.hero.anims.play("jump1", true);
       }
@@ -221,6 +281,10 @@ export class Game extends Phaser.Scene {
       }
       else {
         this.hero.anims.play("jump2", true);
+      }
+      if (this.weaponHitbox.body.enable) {
+        this.weaponHitbox.x = this.hero.x + (this.hero.flipX ? -17.5 : 17.5);
+        this.weaponHitbox.y = this.hero.y - 40;
       }
     }
   }
