@@ -10,6 +10,7 @@ import forest1 from "/assets/maps/Forest1.json";
 import collect from "/assets/sounds/collect.mp3";
 import bounce from "/assets/sounds/bounce.mp3";
 
+
 export class Game extends Phaser.Scene {
   constructor() {
     super("Game");
@@ -42,6 +43,8 @@ export class Game extends Phaser.Scene {
     const greenTree = level.addTilesetImage("Normal Trees (pines) [Foreground]", "greenTree");
     const treeAssets = level.addTilesetImage("null", "treeAssets");
     const tilesets = [tiles, background, greenTree, treeAssets];
+    this.attacking = false;
+
 
     // Create layers
     level.createLayer("Light Mountains (background)", tilesets, 0, 0).setScrollFactor(0.4, 0);
@@ -80,7 +83,55 @@ export class Game extends Phaser.Scene {
       frameRate: 10,
       repeat: -1,
     });
-    this.hero.play("idle");
+    this.anims.create({
+      key: "walk",
+      frames: this.anims.generateFrameNumbers("viking", { start: 13, end: 20 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "run",
+      frames: this.anims.generateFrameNumbers("viking", { start: 26, end: 33 }),
+      frameRate: 10,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "jump1",
+      frames: this.anims.generateFrameNumbers("viking", { start: 78, end: 78 }),
+      frameRate: 1.8,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "jump2",
+      frames: this.anims.generateFrameNumbers("viking", { start: 79, end: 79 }),
+      frameRate: 1.8,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "jump3",
+      frames: this.anims.generateFrameNumbers("viking", { start: 80, end: 80 }),
+      frameRate: 1.8,
+      repeat: -1,
+    });
+    this.anims.create({
+      key: "attack1",
+      frames: this.anims.generateFrameNumbers("viking", { start: 104, end: 107 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "attack2",
+      frames: this.anims.generateFrameNumbers("viking", { start: 117, end: 120 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "attack3",
+      frames: this.anims.generateFrameNumbers("viking", { start: 130, end: 133 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+
     this.physics.add.collider(this.hero, ground);
 
     // Set up camera
@@ -101,21 +152,76 @@ export class Game extends Phaser.Scene {
     );
 
     this.cursors = this.input.keyboard.createCursorKeys();
+    this.shift = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT)
+    this.Z = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.Z);
+    this.X = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.X);
+    this.C = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.C);
+
+    this.hero.on("animationcomplete", () => {
+      // Reset attacking state when any animation completes
+      this.attacking = false;
+      console.log("Animation completed, attacking reset to false");
+    });
+
+
+    // on key down of the x key, play animation
+    this.input.keyboard.on("keydown-X", () => {
+      this.attacking = true;
+      const attackNum = Phaser.Math.Between(1, 3);
+      this.hero.anims.play(`attack${attackNum}`, true);
+      console.log("Attack animation played");
+    });
   }
 
   update() {
     if (this.cursors.left.isDown) {
-      this.hero.setVelocityX(-100);
-      this.hero.flipX = true;
+      if (this.shift.isDown) { // Check if Shift is pressed
+        this.hero.setVelocityX(-200);
+        this.hero.flipX = true;
+        if (this.hero.body.blocked.down && !this.attacking) {
+          this.hero.anims.play("run", true);
+        }
+      } else {
+        this.hero.setVelocityX(-100);
+        this.hero.flipX = true;
+        if (this.hero.body.blocked.down && !this.attacking) {
+          this.hero.anims.play("walk", true);
+        }
+      }
     } else if (this.cursors.right.isDown) {
-      this.hero.setVelocityX(100);
-      this.hero.flipX = false;
+      if (this.shift.isDown) { // Check if Shift is pressed
+        this.hero.setVelocityX(200);
+        this.hero.flipX = false;
+        if (this.hero.body.blocked.down && !this.attacking); {
+          this.hero.anims.play("run", true);
+        }
+      } else {
+        this.hero.setVelocityX(100);
+        this.hero.flipX = false;
+        if (this.hero.body.blocked.down && !this.attacking) {
+          this.hero.anims.play("walk", true);
+        }
+      }
     } else {
-      this.hero.setVelocityX(0);
+      if (!this.attacking) {
+        this.hero.setVelocityX(0);
+        this.hero.anims.play("idle", true);
+      }
     }
-    if (this.cursors.up.isDown && this.hero.body.blocked.down) {
+    if (this.Z.isDown && this.hero.body.blocked.down) {
       this.hero.setVelocityY(-250);
       this.sound.play("bounce");
+    }
+    if (!this.hero.body.blocked.down && !this.attacking) {
+      if (this.hero.body.velocity.y < -20) {
+        this.hero.anims.play("jump1", true);
+      }
+      else if (this.hero.body.velocity.y > 100) {
+        this.hero.anims.play("jump3", true);
+      }
+      else {
+        this.hero.anims.play("jump2", true);
+      }
     }
   }
 }
