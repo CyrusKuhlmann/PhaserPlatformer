@@ -2,18 +2,36 @@ import * as Phaser from "phaser";
 
 import heroIdle from "/assets/metroidvania/herochar sprites(new)/herochar_idle_anim_strip_4.png";
 import viking from "/assets/Viking/Viking-Sheet.png"
+
 import tiles from "/assets\/Legacy-Fantasy - High Forest 2.3\/Assets\/Tiles.png";
 import background from "/assets\/Legacy-Fantasy - High Forest 2.3\/Trees\/Background.png"
 import greenTree from "/assets\/Legacy-Fantasy - High Forest 2.3\/Trees\/Green-Tree.png"
 import treeAssets from "/assets\/Legacy-Fantasy - High Forest 2.3\/Assets\/Tree-Assets.png"
 import forest1 from "/assets/maps/Forest1.json";
+
+import caveTiles from "/assets/Legacy Fantasy - Deep Cave\/Assets\/Tiles.png"
+import props from "/assets/Legacy Fantasy - Deep Cave\/Assets\/Props.png"
+import background1 from "/assets/Legacy Fantasy - Deep Cave\/Background\/Background-1.png"
+import background2 from "/assets/Legacy Fantasy - Deep Cave\/Background\/Background-2.png"
+import background3 from "/assets/Legacy Fantasy - Deep Cave\/Background\/Background-3.png"
+import cave1 from "/assets/maps/Cave1.json";
+
 import collect from "/assets/sounds/collect.mp3";
 import bounce from "/assets/sounds/bounce.mp3";
 import goblinIdle from "/assets/Monsters_Creatures_Fantasy/Goblin/Idle.png"
+import goblinRun from "/assets/Monsters_Creatures_Fantasy/Goblin/Run.png"
+import goblinAttack from "/assets/Monsters_Creatures_Fantasy/Goblin/Attack.png"
+import goblinDeath from "/assets/Monsters_Creatures_Fantasy/Goblin/Death.png"
 
 export class Game extends Phaser.Scene {
   constructor() {
     super("Game");
+  }
+
+  init(data) {
+    this.spawnX = data.spawnX || 400;
+    this.spawnY = data.spawnY || 300;
+    this.currentLevel = data.currentLevel || "forest1";
   }
 
   preload() {
@@ -29,11 +47,29 @@ export class Game extends Phaser.Scene {
       frameWidth: 150,
       frameHeight: 150,
     });
+    this.load.spritesheet("goblinRun", goblinRun, {
+      frameWidth: 150,
+      frameHeight: 150,
+    });
+    this.load.spritesheet("goblinAttack", goblinAttack, {
+      frameWidth: 150,
+      frameHeight: 150,
+    });
+    this.load.spritesheet("goblinDeath", goblinDeath, {
+      frameWidth: 150,
+      frameHeight: 150,
+    });
     this.load.image("background", background);
     this.load.image("tiles", tiles);
     this.load.image("greenTree", greenTree);
     this.load.image("treeAssets", treeAssets);
     this.load.tilemapTiledJSON("forest1", forest1);
+    this.load.image("background1", background1);
+    this.load.image("tilesCave", caveTiles);
+    this.load.image("props", props);
+    this.load.image("background2", background2);
+    this.load.image("background3", background3);
+    this.load.tilemapTiledJSON("cave1", cave1);
     this.load.audio("collect", collect);
     this.load.audio("bounce", bounce);
   }
@@ -41,39 +77,60 @@ export class Game extends Phaser.Scene {
   create() {
     const { height } = this.scale;
 
-    const level = this.make.tilemap({ key: "forest1" });
+    const level = this.make.tilemap({ key: this.currentLevel });
     const tiles = level.addTilesetImage("Tiles", "tiles");
     const background = level.addTilesetImage("Trees (background)", "background");
     const greenTree = level.addTilesetImage("Normal Trees (pines) [Foreground]", "greenTree");
     const treeAssets = level.addTilesetImage("null", "treeAssets");
-    const tilesets = [tiles, background, greenTree, treeAssets];
+    const caveTiles = level.addTilesetImage("CaveTiles", "tilesCave");
+    const props = level.addTilesetImage("Props", "props");
+    const background1 = level.addTilesetImage("Background-1", "background1");
+    const background2 = level.addTilesetImage("Background-2", "background2");
+    const background3 = level.addTilesetImage("Background-3", "background3");
+    const tilesets = [tiles, background, greenTree, treeAssets, caveTiles, props, background1, background2, background3];
     this.attacking = false;
     this.dashing = false;
 
 
     // Create layers
-    level.createLayer("Light Mountains (background)", tilesets, 0, 0).setScrollFactor(0.4, 0);
-    level.createLayer("Light Trees (background)", tilesets, 0, 0).setScrollFactor(0.4, 0);
-    level.createLayer("Dark Mountains (background)", tilesets, 0, 0).setScrollFactor(0.5, 0);
-    level.createLayer("Dark Trees (background)", tilesets, 0, 0).setScrollFactor(0.5, 0);
-    this.add.rectangle(0, 0, level.widthInPixels, level.heightInPixels, 0xffffff, 0.15).setOrigin(0, 0).setScrollFactor(0, 0);
-    level.createLayer("Trees (foreground)", tilesets, 0, 0);
-    level.createLayer("Pine trees 2 (foreground)", tilesets, 0, 0).setScrollFactor(0.7, 0);
-    level.createLayer("Pine trees 1 (foreground)", tilesets, 0, 0).setScrollFactor(0.7, 0);
-    this.add.rectangle(0, 0, level.widthInPixels, level.heightInPixels, 0xffffff, 0.15).setOrigin(0, 0).setScrollFactor(0, 0);
-    level.createLayer("Water (foreground)", tilesets, 0, 0);
-    level.createLayer("Aquatic Plants (foreground)", tilesets, 0, 0);
-    level.createLayer("Rocks (foreground)", tilesets, 0, 0);
-    level.createLayer("Bushes (foreground)", tilesets, 0, 0);
-    level.createLayer("Cave Background (background)", tilesets, 0, 0);
-    this.ground = level
-      .createLayer("Ground (foreground)", tilesets, 0, 0)
-      .setCollisionBetween(1, 10000); // Choose which tile IDs collide
-    level.createLayer("Grass (foreground)", tilesets, 0, 0);
-    level.createLayer("Overhangs (foreground)", tilesets, 0, 0);
+    if (this.currentLevel === "forest1") {
+      level.createLayer("Light Mountains (background)", tilesets, 0, 0).setScrollFactor(0.4, 0);
+      level.createLayer("Light Trees (background)", tilesets, 0, 0).setScrollFactor(0.4, 0);
+      level.createLayer("Dark Mountains (background)", tilesets, 0, 0).setScrollFactor(0.5, 0);
+      level.createLayer("Dark Trees (background)", tilesets, 0, 0).setScrollFactor(0.5, 0);
+      this.add.rectangle(0, 0, level.widthInPixels, level.heightInPixels, 0xffffff, 0.15).setOrigin(0, 0).setScrollFactor(0, 0);
+      level.createLayer("Trees (foreground)", tilesets, 0, 0);
+      level.createLayer("Pine trees 2 (foreground)", tilesets, 0, 0).setScrollFactor(0.675, 0);
+      level.createLayer("Pine trees 1 (foreground)", tilesets, 0, 0).setScrollFactor(0.7, 0);
+      this.add.rectangle(0, 0, level.widthInPixels, level.heightInPixels, 0xffffff, 0.15).setOrigin(0, 0).setScrollFactor(0, 0);
+      level.createLayer("Water (foreground)", tilesets, 0, 0);
+      level.createLayer("Aquatic Plants (foreground)", tilesets, 0, 0);
+      level.createLayer("Bushes (foreground)", tilesets, 0, 0);
+      level.createLayer("Cave Background (background)", tilesets, 0, 0);
+      level.createLayer("Rocks (foreground)", tilesets, 0, 0);
+      this.ground = level
+        .createLayer("Ground (foreground)", tilesets, 0, 0)
+        .setCollisionBetween(1, 10000); // Choose which tile IDs collide
+      level.createLayer("Grass (foreground)", tilesets, 0, 0);
+      level.createLayer("Overhangs (foreground)", tilesets, 0, 0);
+    }
+    else if (this.currentLevel === "cave1") {
+      level.createLayer("Background-3", tilesets, 0, 0).setScrollFactor(.3);
+      level.createLayer("Background-2", tilesets, 0, 0).setScrollFactor(.5);
+      level.createLayer("Background-1", tilesets, 0, 0).setScrollFactor(.7);
+      this.ground = level
+        .createLayer("Ground", tilesets, 0, 0)
+        .setCollisionBetween(1, 10000); // Choose which tile IDs collide
+      level.createLayer("BlockTops", tilesets, 0, 0);
+      level.createLayer("Crystals1", tilesets, 0, 0);
+      level.createLayer("Crystals2", tilesets, 0, 0);
+      level.createLayer("Crystals3", tilesets, 0, 0);
+      level.createLayer("Chains", tilesets, 0, 0);
+      level.createLayer("Spikes", tilesets, 0, 0);
+    }
 
     this.hero = this.physics.add
-      .sprite(400, height - 100, "viking")
+      .sprite(this.spawnX, this.spawnY, "viking")
       .setOrigin(0.5, 1)
       .setBounce(0)
       .setScale(1)
@@ -81,16 +138,37 @@ export class Game extends Phaser.Scene {
     this.hero.body.setSize(33, 46).setOffset(41, 24);
     this.hero.hit = false;
 
-    this.goblin = this.physics.add
-      .sprite(550, height - 100, "goblinIdle")
-      .setOrigin(0.5, 1)
-      .setBounce(0)
-      .setScale(1)
-      .setCollideWorldBounds(true);
-    this.goblin.body.setSize(40, 35).setOffset(55, 65);
-    this.goblin.setVelocityX(100)
-    this.goblin.hit = false;
-    this.goblin.hits = 0;
+    this.goblins = this.physics.add.group({
+      classType: Phaser.Physics.Arcade.Sprite,
+      runChildUpdate: true, // Update children automatically
+    });
+
+
+    level.getObjectLayer("Enemies").objects.forEach((enemy) => {
+      const goblin = this.physics.add
+        .sprite(enemy.x, enemy.y, "goblinIdle")
+        .setOrigin(0.5, 1)
+        .setBounce(0)
+        .setScale(1)
+        .setCollideWorldBounds(true);
+      goblin.body.setSize(40, 35).setOffset(55, 65);
+      this.goblins.add(goblin);
+    });
+    this.goblins.getChildren().forEach(goblin => {
+      goblin.body.setSize(40, 35).setOffset(55, 65);
+      goblin.setVelocityX(100)
+      goblin.hit = false;
+      goblin.hits = 0;
+      goblin.attacking = false;
+      goblin.on("animationcomplete", (anim) => {
+        if (anim.key === "goblinAttack") {
+          goblin.attacking = false;
+        }
+        else if (anim.key === "goblinDeath") {
+          goblin.destroy();
+        }
+      });
+    });
 
     this.weaponHitbox = this.physics.add
       .sprite(this.hero.x + 22.5, this.hero.y - 40, null)
@@ -103,10 +181,13 @@ export class Game extends Phaser.Scene {
     // creat overlap between the goblin and the player
     this.physics.add.overlap(
       this.hero,
-      this.goblin,
+      this.goblins,
       (hero, goblin) => {
         if (!hero.hit) {
-          console.log("Hero hit goblin");
+          if (goblin.hits < 5) {
+            goblin.anims.play("goblinAttack", true);
+          }
+          goblin.attacking = true;
           hero.hit = true; // Prevent multiple hits
           this.sound.play("bounce");
           const oldVelocity = goblin.body.velocity.x;
@@ -142,15 +223,15 @@ export class Game extends Phaser.Scene {
     // create overlap between the weapon hitbox and the goblin
     this.physics.add.overlap(
       this.weaponHitbox,
-      this.goblin,
+      this.goblins,
       (hitbox, goblin) => {
         if (this.attacking && hitbox.body.enable && !goblin.hit) {
-          this.goblin.hits += 1;
+          goblin.hits += 1;
           goblin.hit = true; // Prevent multiple hits
           this.sound.play("collect");
-          if (this.goblin.hits >= 3) {
-            this.goblin.destroy();
-            this.goblin.hits = 0;
+          if (goblin.hits >= 5) {
+            goblin.anims.play("goblinDeath", true);
+            goblin.setVelocityX(goblin.flipX ? 100 : -100)
             return;
           }
           const oldVelocity = goblin.body.velocity.x;
@@ -249,9 +330,27 @@ export class Game extends Phaser.Scene {
       frameRate: 7,
       repeat: 0,
     });
+    this.anims.create({
+      key: "goblinRun",
+      frames: this.anims.generateFrameNumbers("goblinRun", { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "goblinAttack",
+      frames: this.anims.generateFrameNumbers("goblinAttack", { start: 5, end: 7 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "goblinDeath",
+      frames: this.anims.generateFrameNumbers("goblinDeath", { start: 0, end: 3 }),
+      frameRate: 5,
+      repeat: 0,
+    });
 
     this.physics.add.collider(this.hero, this.ground);
-    this.physics.add.collider(this.goblin, this.ground);
+    this.physics.add.collider(this.goblins, this.ground);
 
     // Set up camera
     this.cameras.main.setBounds(
@@ -277,18 +376,20 @@ export class Game extends Phaser.Scene {
 
     // on key down of the x key, play animation
     this.input.keyboard.on("keydown-X", () => {
-      this.attacking = true;
-      const attackNum = Phaser.Math.Between(1, 3);
-      if (!this.hero.body.blocked.down) {
-        this.hero.anims.play("attack3", true)
+      if (this.attacking) return; // Prevent attack if already attacking or dashing
+      if (!this.dashing) {
+        this.attacking = true;
+        const attackNum = Phaser.Math.Between(1, 3);
+        if (!this.hero.body.blocked.down) {
+          this.hero.anims.play("attack3", true)
+        }
+        else {
+          this.hero.anims.play(`attack${attackNum}`, true);
+        }
+        // Enable and position the weapon hitbox
+        this.weaponHitbox.setVisible(false);
+        this.weaponHitbox.body.enable = true;
       }
-      else {
-        this.hero.anims.play(`attack${attackNum}`, true);
-      }
-      // Enable and position the weapon hitbox
-      this.weaponHitbox.setVisible(false);
-      this.weaponHitbox.body.enable = true;
-
     });
 
     // ...when attack animation completes, hide and disable the hitbox...
@@ -305,40 +406,69 @@ export class Game extends Phaser.Scene {
       }
     });
 
+
+
     this.input.keyboard.on("keydown-C", () => {
-      this.dashing = true;
-      this.hero.anims.play("dash", true);
-      if (this.hero.flipX) {
-        this.hero.setVelocityX(-175);
-      }
-      else {
-        this.hero.setVelocityX(175);
+      if (!this.attacking) {
+        this.dashing = true;
+        this.hero.anims.play("dash", true);
+        if (this.hero.flipX) {
+          this.hero.setVelocityX(-175);
+        }
+        else {
+          this.hero.setVelocityX(175);
+        }
       }
     });
   }
 
   update() {
-    const edgeOffset = this.goblin.flipX ? -this.goblin.body.width / 2 - 1 : this.goblin.body.width / 2 + 1;
-    const checkX = this.goblin.x + edgeOffset;
-    const checkY = this.goblin.y + 2;
 
-    const edgeTile = this.ground.getTileAtWorldXY(checkX, checkY);
-
-    if (!edgeTile || !edgeTile.collides) {
-      this.goblin.flipX = !this.goblin.flipX;
-      this.goblin.setVelocityX(this.goblin.flipX ? -75 : 75);
+    if (this.hero.body.x > 1886 && this.hero.body.y > 130 && this.currentLevel === "forest1") {
+      // fade out camera
+      this.cameras.main.fadeOut(250);
+      this.scene.restart({
+        spawnX: 25,
+        spawnY: 900,
+        currentLevel: "cave1",
+      });
+      return;
     }
-
-    this.goblin.anims.play("goblinIdle", true);
-    if (this.goblin.body.blocked.right) {
-      this.goblin.flipX = true;
-      this.goblin.setVelocityX(-75)
+    if (this.hero.body.x < 5 && this.currentLevel === "cave1") {
+      // fade out camera
+      this.cameras.main.fadeOut(250);
+      this.scene.restart({
+        spawnX: 1860,
+        spawnY: 500,
+        currentLevel: "forest1",
+      });
+      return;
     }
-    else if (this.goblin.body.blocked.left) {
-      this.goblin.flipX = false;
-      this.goblin.setVelocityX(75)
-    }
+    this.goblins.getChildren().forEach(goblin => {
+      const edgeOffset = goblin.flipX ? -goblin.body.width / 2 - 1 : goblin.body.width / 2 + 1;
+      const checkX = goblin.x + edgeOffset;
+      const checkY = goblin.y - 20;
 
+      const edgeTile = this.ground.getTileAtWorldXY(checkX, checkY);
+      if (!edgeTile || !edgeTile.collides) {
+        goblin.flipX = !goblin.flipX;
+        goblin.setVelocityX(goblin.flipX ? -75 : 75);
+      }
+      if (goblin.body.velocity.x !== 0 && !goblin.attacking && goblin.hits < 5) {
+        goblin.anims.play("goblinRun", true);
+      } else if (!goblin.attacking && goblin.hits < 5) {
+        goblin.anims.play("goblinIdle", true);
+      }
+
+      if (goblin.body.blocked.right) {
+        goblin.flipX = true;
+        goblin.setVelocityX(-75)
+      }
+      else if (goblin.body.blocked.left) {
+        goblin.flipX = false;
+        goblin.setVelocityX(75)
+      }
+    });
     this.weaponHitbox.x = this.hero.x + (this.hero.flipX ? -17.5 : 17.5);
     this.weaponHitbox.y = this.hero.y - 40;
 
