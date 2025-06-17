@@ -29,7 +29,7 @@ export class Game extends Phaser.Scene {
   }
 
   init(data) {
-    this.spawnX = data.spawnX || 400;
+    this.spawnX = data.spawnX || 200;
     this.spawnY = data.spawnY || 300;
     this.currentLevel = data.currentLevel || "forest1";
   }
@@ -137,6 +137,21 @@ export class Game extends Phaser.Scene {
       .setCollideWorldBounds(true);
     this.hero.body.setSize(33, 46).setOffset(41, 24);
     this.hero.hit = false;
+    this.hero.MaxHealth = 100;
+    this.hero.health = this.hero.MaxHealth;
+
+    this.healthbarBg = this.add.rectangle(20, 20, 104, 24, 0x222222)
+      .setOrigin(0, 0)
+      .setScrollFactor(0)
+
+    this.healthBar = this.add.rectangle(22, 22, 100, 20, 0x00ff00)
+      .setOrigin(0, 0)
+      .setScrollFactor(0);
+
+    this.healthText = this.add.text(130, 22, `Health: ${this.hero.health}/${this.hero.MaxHealth}`, {
+      fontSize: '18px Arial',
+      fill: '#ffffff'
+    }).setOrigin(0, 0).setScrollFactor(0);
 
     this.goblins = this.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
@@ -178,6 +193,10 @@ export class Game extends Phaser.Scene {
       .setImmovable(true);
     this.weaponHitbox.body.allowGravity = false;
 
+
+
+
+
     // creat overlap between the goblin and the player
     this.physics.add.overlap(
       this.hero,
@@ -190,6 +209,7 @@ export class Game extends Phaser.Scene {
           goblin.attacking = true;
           hero.hit = true; // Prevent multiple hits
           this.sound.play("bounce");
+          this.hero.health = Math.max(0, this.hero.health - 10);
           const oldVelocity = goblin.body.velocity.x;
           if (goblin.flipX) { // goblin is facing left
             hero.setVelocityX(-200);
@@ -423,6 +443,18 @@ export class Game extends Phaser.Scene {
   }
 
   update() {
+    const healthPercent = Phaser.Math.Clamp(this.hero.health / this.hero.MaxHealth, 0, 1);
+    this.healthBar.setSize(100 * healthPercent, 20);
+    this.healthText.setText(`${this.hero.health}`);
+
+    if (this.hero.health <= 0) {
+      this.hero.setPosition(this.spawnX, this.spawnY);
+      this.hero.health = this.hero.MaxHealth;
+      this.cameras.main.fadeOut(1);
+      this.time.delayedCall(1000, () => {
+        this.cameras.main.fadeIn(250);
+      }, this);
+    }
 
     if (this.hero.body.x > 1886 && this.hero.body.y > 130 && this.currentLevel === "forest1") {
       // fade out camera
