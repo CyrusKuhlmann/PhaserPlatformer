@@ -8,6 +8,7 @@ import background from "/assets\/Legacy-Fantasy - High Forest 2.3\/Trees\/Backgr
 import greenTree from "/assets\/Legacy-Fantasy - High Forest 2.3\/Trees\/Green-Tree.png"
 import treeAssets from "/assets\/Legacy-Fantasy - High Forest 2.3\/Assets\/Tree-Assets.png"
 import forest1 from "/assets/maps/Forest1.json";
+import cliff1 from "/assets/maps/Cliff1.json";
 
 import caveTiles from "/assets/Legacy Fantasy - Deep Cave\/Assets\/Tiles.png"
 import props from "/assets/Legacy Fantasy - Deep Cave\/Assets\/Props.png"
@@ -32,6 +33,7 @@ export class Game extends Phaser.Scene {
     this.spawnX = data.spawnX || 200;
     this.spawnY = data.spawnY || 300;
     this.currentLevel = data.currentLevel || "forest1";
+    this.health = data.health || 100;
   }
 
   preload() {
@@ -70,6 +72,7 @@ export class Game extends Phaser.Scene {
     this.load.image("background2", background2);
     this.load.image("background3", background3);
     this.load.tilemapTiledJSON("cave1", cave1);
+    this.load.tilemapTiledJSON("cliff1", cliff1);
     this.load.audio("collect", collect);
     this.load.audio("bounce", bounce);
   }
@@ -90,6 +93,9 @@ export class Game extends Phaser.Scene {
     const tilesets = [tiles, background, greenTree, treeAssets, caveTiles, props, background1, background2, background3];
     this.attacking = false;
     this.dashing = false;
+    this.jumpTimer = 0;
+    this.isJumping = false;
+    this.heroGravity = 600
 
 
     // Create layers
@@ -128,6 +134,18 @@ export class Game extends Phaser.Scene {
       level.createLayer("Chains", tilesets, 0, 0);
       level.createLayer("Spikes", tilesets, 0, 0);
     }
+    else if (this.currentLevel === "cliff1") {
+      level.createLayer("Light Mountains (background)", tilesets, 0, 0).setScrollFactor(0.4, 0);
+      level.createLayer("Dark Mountains (background)", tilesets, 0, 0).setScrollFactor(0.5, 0);
+      level.createLayer("Pine trees 1 (foreground)", tilesets, 0, 0).setScrollFactor(0.7, 0);
+      level.createLayer("bushes (foreground)", tilesets, 0, 0);
+      level.createLayer("Cave Background (background)", tilesets, 0, 0);
+      level.createLayer("Rocks (foreground)", tilesets, 0, 0);
+      this.ground = level
+        .createLayer("Ground (foreground)", tilesets, 0, 0)
+        .setCollisionBetween(1, 10000); // Choose which tile IDs collide
+      level.createLayer("Grass (foreground)", tilesets, 0, 0);
+    }
 
     this.hero = this.physics.add
       .sprite(this.spawnX, this.spawnY, "viking")
@@ -138,7 +156,9 @@ export class Game extends Phaser.Scene {
     this.hero.body.setSize(33, 46).setOffset(41, 24);
     this.hero.hit = false;
     this.hero.MaxHealth = 100;
-    this.hero.health = this.hero.MaxHealth;
+
+
+
 
     this.healthbarBg = this.add.rectangle(20, 20, 104, 24, 0x222222)
       .setOrigin(0, 0)
@@ -148,7 +168,7 @@ export class Game extends Phaser.Scene {
       .setOrigin(0, 0)
       .setScrollFactor(0);
 
-    this.healthText = this.add.text(130, 22, `Health: ${this.hero.health}/${this.hero.MaxHealth}`, {
+    this.healthText = this.add.text(130, 22, `Health: ${this.health}/${this.hero.MaxHealth}`, {
       fontSize: '18px Arial',
       fill: '#ffffff'
     }).setOrigin(0, 0).setScrollFactor(0);
@@ -209,7 +229,7 @@ export class Game extends Phaser.Scene {
           goblin.attacking = true;
           hero.hit = true; // Prevent multiple hits
           this.sound.play("bounce");
-          this.hero.health = Math.max(0, this.hero.health - 10);
+          this.health = Math.max(0, this.health - 10);
           const oldVelocity = goblin.body.velocity.x;
           if (goblin.flipX) { // goblin is facing left
             hero.setVelocityX(-200);
@@ -443,13 +463,15 @@ export class Game extends Phaser.Scene {
   }
 
   update() {
-    const healthPercent = Phaser.Math.Clamp(this.hero.health / this.hero.MaxHealth, 0, 1);
+    this.hero.body.setGravityY(this.heroGravity)
+    const healthPercent = Phaser.Math.Clamp(this.health / this.hero.MaxHealth, 0, 1);
     this.healthBar.setSize(100 * healthPercent, 20);
-    this.healthText.setText(`${this.hero.health}`);
+    this.healthText.setText(`${this.health}`);
 
-    if (this.hero.health <= 0) {
-      this.hero.setPosition(this.spawnX, this.spawnY);
-      this.hero.health = this.hero.MaxHealth;
+    if (this.health <= 0) {
+      this.hero.setPosition(200, 300);
+      this.health = this.hero.MaxHealth;
+      this.currentLevel = "forest1"; // Reset to forest1 on death
       this.cameras.main.fadeOut(1);
       this.time.delayedCall(1000, () => {
         this.cameras.main.fadeIn(250);
@@ -463,6 +485,7 @@ export class Game extends Phaser.Scene {
         spawnX: 25,
         spawnY: 900,
         currentLevel: "cave1",
+        health: this.health,
       });
       return;
     }
@@ -473,6 +496,29 @@ export class Game extends Phaser.Scene {
         spawnX: 1860,
         spawnY: 500,
         currentLevel: "forest1",
+        health: this.health,
+      });
+      return;
+    }
+    if (this.hero.body.y < 10 && this.currentLevel === "cave1") {
+      // fade out camera
+      this.cameras.main.fadeOut(250);
+      this.scene.restart({
+        spawnX: 635,
+        spawnY: 300,
+        currentLevel: "cliff1",
+        health: this.health,
+      });
+      return;
+    }
+    if (this.hero.body.y > 350 && this.currentLevel === "cliff1") {
+      // fade out camera
+      this.cameras.main.fadeOut(250);
+      this.scene.restart({
+        spawnX: this.hero.body.x - 160,
+        spawnY: 90,
+        currentLevel: "cave1",
+        health: this.health,
       });
       return;
     }
@@ -538,9 +584,21 @@ export class Game extends Phaser.Scene {
         this.hero.anims.play("idle", true);
       }
     }
-    if (this.Z.isDown && this.hero.body.blocked.down) {
-      this.hero.setVelocityY(-227.5);
-      this.sound.play("bounce");
+    if (this.Z.isDown && this.hero.body.blocked.down && !this.isJumping) {
+      // Start jump
+      this.isJumping = true;
+      this.jumpTimer = 0;
+    }
+
+    if (this.isJumping && this.Z.isDown && this.jumpTimer < 800) {
+      // While Z is held and timer not exceeded, keep setting upward velocity
+      this.hero.setVelocityY(-200);
+      this.jumpTimer += this.game.loop.delta;
+    }
+
+    if (this.Z.isUp || this.jumpTimer >= 350 || this.hero.body.velocity.y > 0) {
+      // Stop boosting jump if key is released, max time reached, or player is falling
+      this.isJumping = false;
     }
     if (!this.hero.body.blocked.down && !this.attacking && !this.dashing) {
       if (this.hero.body.velocity.y < -20) {
