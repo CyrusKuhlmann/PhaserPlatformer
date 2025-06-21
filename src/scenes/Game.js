@@ -24,6 +24,11 @@ import goblinRun from "/assets/Monsters_Creatures_Fantasy/Goblin/Run.png"
 import goblinAttack from "/assets/Monsters_Creatures_Fantasy/Goblin/Attack.png"
 import goblinDeath from "/assets/Monsters_Creatures_Fantasy/Goblin/Death.png"
 
+import boarIdle from "/assets/Legacy Enemy - Boar Warrior/Idle/Idle-Sheet-Back.png"
+import boarWalk from "/assets/Legacy Enemy - Boar Warrior/Walk/Walk-Sheet-Black.png"
+import boarAttack from "/assets/Legacy Enemy - Boar Warrior/Attack/Attack-01-Sheet-Black.png"
+import boarDeath from "/assets/Legacy Enemy - Boar Warrior/Die/Die-Sheet-Black.png"
+
 export class Game extends Phaser.Scene {
   constructor() {
     super("Game");
@@ -34,6 +39,7 @@ export class Game extends Phaser.Scene {
     this.spawnY = data.spawnY || 300;
     this.currentLevel = data.currentLevel || "forest1";
     this.health = data.health || 100;
+    this.flashing = data.flashing || false;
   }
 
   preload() {
@@ -61,6 +67,23 @@ export class Game extends Phaser.Scene {
       frameWidth: 150,
       frameHeight: 150,
     });
+    this.load.spritesheet("boarDeath", boarDeath, {
+      frameWidth: 144,
+      frameHeight: 96,
+    });
+    this.load.spritesheet("boarAttack", boarAttack, {
+      frameWidth: 160,
+      frameHeight: 112,
+    });
+    this.load.spritesheet("boarIdle", boarIdle, {
+      frameWidth: 96,
+      frameHeight: 112,
+    });
+    this.load.spritesheet("boarWalk", boarWalk, {
+      frameWidth: 80,
+      frameHeight: 112,
+    });
+
     this.load.image("background", background);
     this.load.image("tiles", tiles);
     this.load.image("greenTree", greenTree);
@@ -96,6 +119,12 @@ export class Game extends Phaser.Scene {
     this.jumpTimer = 0;
     this.isJumping = false;
     this.heroGravity = 600
+    this.jumpStartY = null;
+    this.minGravity = 500
+    this.maxGravity = 900
+    this.bossAgro = false;
+    this.playerReachedBossGoToZone = false;
+
 
 
     // Create layers
@@ -156,7 +185,18 @@ export class Game extends Phaser.Scene {
     this.hero.body.setSize(33, 46).setOffset(41, 24);
     this.hero.hit = false;
     this.hero.MaxHealth = 100;
-
+    if (this.flashing) {
+      this.tweens.add({
+        targets: this.hero,
+        alpha: { from: 1, to: 0.5 },
+        duration: 100,
+        yoyo: true,
+        repeat: 10,
+        onComplete: () => {
+          this.hero.clearAlpha(); // Reset alpha after flashing
+        }
+      });
+    }
 
 
 
@@ -217,6 +257,46 @@ export class Game extends Phaser.Scene {
 
 
 
+    // Create boar enemy
+    this.boar = this.physics.add
+      .sprite(200, 50, "boarIdle")
+      .setOrigin(0.5, 1)
+      .setBounce(0)
+      .setScale(1)
+      .setCollideWorldBounds(true);
+    //this.boar.body.setSize(45, 60).setOffset((this.boar.flipX ? 0 : 7), 2);
+    this.boar.jumpedBack = false;
+
+    this.bossActivationZone = this.physics.add
+      .sprite(this.boar.x + 7, this.boar.y - 52, null)
+      .setSize(250, 100)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false)
+      .setImmovable(true)
+      .setCollideWorldBounds(false);
+    this.bossActivationZone.body.allowGravity = false;
+
+    this.bossAerialZone = this.physics.add
+      .sprite(this.boar.x + 7, this.boar.y - 87, null)
+      .setSize(100, 50)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false)
+      .setImmovable(true)
+      .setCollideWorldBounds(false);
+    this.bossAerialZone.body.allowGravity = false;
+
+    this.bossGoToZone = this.physics.add
+      .sprite(this.boar.x + 7, this.boar.y - 52, null)
+      .setSize(140, 100)
+      .setOrigin(0.5, 0.5)
+      .setVisible(false)
+      .setImmovable(true)
+      .setCollideWorldBounds(false);
+    this.bossGoToZone.body.allowGravity = false;
+
+
+
+
     // creat overlap between the goblin and the player
     this.physics.add.overlap(
       this.hero,
@@ -230,6 +310,22 @@ export class Game extends Phaser.Scene {
           hero.hit = true; // Prevent multiple hits
           this.sound.play("bounce");
           this.health = Math.max(0, this.health - 10);
+          if (this.health <= 0) {
+            this.cameras.main.fadeOut(1);
+            // on fade out complete, restart the scene
+            this.cameras.main.once("camerafadeoutcomplete", () => {
+              this.time.delayedCall(1000, () => {
+                this.scene.restart({
+                  spawnX: 200,
+                  spawnY: 300,
+                  currentLevel: "forest1",
+                  health: this.hero.MaxHealth,
+                  flashing: true,
+                });
+              });
+            });
+            return;
+          }
           const oldVelocity = goblin.body.velocity.x;
           if (goblin.flipX) { // goblin is facing left
             hero.setVelocityX(-200);
@@ -259,6 +355,100 @@ export class Game extends Phaser.Scene {
       null,
       this
     );
+
+    // create overlap between the boar and the player
+    this.physics.add.overlap(
+      this.hero,
+      this.boar,
+      (hero, boar) => {
+        if (!hero.hit) {
+          boar.anims.play("boarAttack", true);
+          boar.attacking = true;
+          hero.hit = true; // Prevent multiple hits
+          this.sound.play("bounce");
+          this.health = Math.max(0, this.health - 10);
+          if (this.health <= 0) {
+            this.cameras.main.fadeOut(1);
+            // on fade out complete, restart the scene
+            this.cameras.main.once("camerafadeoutcomplete", () => {
+              this.time.delayedCall(1000, () => {
+                this.scene.restart({
+                  spawnX: 200,
+                  spawnY: 300,
+                  currentLevel: "forest1",
+                  health: this.hero.MaxHealth,
+                  flashing: true,
+                });
+              });
+            });
+            return;
+          }
+          const oldVelocity = boar.body.velocity.x;
+          if (boar.flipX) { // boar is facing left
+            hero.setVelocityX(-200);
+            this.tweens.add({
+              targets: hero.body.velocity,
+              x: oldVelocity,
+              duration: 500,
+              ease: "Power1",
+            });
+          }
+          else if (!boar.flipX) { // boar is facing right
+            hero.setVelocityX(200);
+            this.tweens.add({
+              targets: hero.body.velocity,
+              x: oldVelocity,
+              duration: 500,
+              ease: "Power1",
+            });
+          }
+          hero.setTint(0xff0000);
+          this.time.delayedCall(500, () => {
+            hero.hit = false; // Reset hit state after delay
+            hero.clearTint();
+          });
+        }
+      },
+      null,
+      this
+    );
+
+    // create overlap between the player and the boar activation zone
+    this.physics.add.overlap(
+      this.hero,
+      this.bossActivationZone,
+      () => {
+        this.bossAgro = true;
+      });
+
+
+    this.physics.add.overlap(
+      this.hero,
+      this.bossAerialZone,
+      () => {
+        if (!this.boar.jumpedBack && this.boar.body.blocked.down) {
+          this.boar.setVelocityX(this.boar.flipX ? -200 : 200);
+          this.boar.jumpedBack = true;
+          this.time.delayedCall(800, () => {
+            this.boar.jumpedBack = false;
+          });
+        }
+      },
+      null,
+      this
+    );
+
+    this.physics.add.overlap(
+      this.hero,
+      this.bossGoToZone,
+      () => {
+        this.playerReachedBossGoToZone = true;
+      },
+      null,
+      this
+    );
+
+
 
     // create overlap between the weapon hitbox and the goblin
     this.physics.add.overlap(
@@ -388,9 +578,34 @@ export class Game extends Phaser.Scene {
       frameRate: 5,
       repeat: 0,
     });
+    this.anims.create({
+      key: "boarDeath",
+      frames: this.anims.generateFrameNumbers("boarDeath", { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "boarAttack",
+      frames: this.anims.generateFrameNumbers("boarAttack", { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "boarIdle",
+      frames: this.anims.generateFrameNumbers("boarIdle", { start: 0, end: 3 }),
+      frameRate: 5,
+      repeat: 0,
+    });
+    this.anims.create({
+      key: "boarWalk",
+      frames: this.anims.generateFrameNumbers("boarWalk", { start: 0, end: 7 }),
+      frameRate: 10,
+      repeat: 0,
+    });
 
     this.physics.add.collider(this.hero, this.ground);
     this.physics.add.collider(this.goblins, this.ground);
+    this.physics.add.collider(this.boar, this.ground);
 
     // Set up camera
     this.cameras.main.setBounds(
@@ -463,19 +678,68 @@ export class Game extends Phaser.Scene {
   }
 
   update() {
-    this.hero.body.setGravityY(this.heroGravity)
+    if (!this.physics.overlap(this.hero, this.bossGoToZone)) {
+      this.playerReachedBossGoToZone = false;
+    }
     const healthPercent = Phaser.Math.Clamp(this.health / this.hero.MaxHealth, 0, 1);
     this.healthBar.setSize(100 * healthPercent, 20);
     this.healthText.setText(`${this.health}`);
 
-    if (this.health <= 0) {
-      this.hero.setPosition(200, 300);
-      this.health = this.hero.MaxHealth;
-      this.currentLevel = "forest1"; // Reset to forest1 on death
-      this.cameras.main.fadeOut(1);
-      this.time.delayedCall(1000, () => {
-        this.cameras.main.fadeIn(250);
-      }, this);
+    // this.boar.body.setOffset((this.boar.flipX ? 14 : 35), 2)
+    if (this.boar.anims.currentAnim !== null) {
+      if (this.boar.anims.currentAnim.key === "boarIdle") {
+        this.boar.body.setSize(45, 60).setOffset((this.boar.flipX ? 14 : 35), 50);
+      }
+      else if (this.boar.anims.currentAnim.key === "boarWalk") {
+        this.boar.body.setSize(45, 60).setOffset((this.boar.flipX ? 14 : 21), 50);
+      }
+      else if (this.boar.anims.currentAnim.key === "boarAttack") {
+        this.boar.body.setSize(45, 60).setOffset((this.boar.flipX ? 46 : 67), 50);
+      }
+      else if (this.boar.anims.currentAnim.key === "boarDeath") {
+        this.boar.body.setSize(45, 60).setOffset((this.boar.flipX ? 14 : 35), 50);
+      }
+    }
+    if (this.boar.anims.currentAnim === null) {
+      this.boar.body.setSize(45, 60).setOffset((this.boar.flipX ? 14 : 35), 50);
+    }
+
+    if (this.bossAgro && !this.playerReachedBossGoToZone) {
+      if (this.hero.x < this.boar.x) {
+        this.boar.flipX = false;
+        this.boar.setVelocityX(-80);
+      } else if (this.hero.x > this.boar.x) {
+        this.boar.flipX = true;
+        this.boar.setVelocityX(80);
+      }
+    }
+    else if (this.playerReachedBossGoToZone) {
+      this.boar.setVelocityX(0);
+      if (this.hero.x < this.boar.x) {
+        this.boar.flipX = false;
+      } else if (this.hero.x > this.boar.x) {
+        this.boar.flipX = true;
+      }
+    }
+    if (this.bossAgro && !this.boar.attacking && Phaser.Math.Distance.Between(this.hero.x, this.hero.y, this.boar.x, this.boar.y) < 80) {
+      this.boar.play("boarAttack", true);
+      this.boar.attacking = true;
+      this.boar.on("animationcomplete", (anim) => {
+        if (anim.key === "boarAttack") {
+          this.boar.attacking = false;
+        } else if (anim.key === "boarDeath") {
+          this.boar.destroy();
+        }
+      });
+    } else if (!this.boar.attacking) {
+      if (this.boar.body.velocity.x !== 0) {
+        this.boar.play("boarWalk", true);
+      } else {
+        this.boar.play("boarIdle", true);
+      }
+    }
+    if (!this.boar.attacking && this.boar.body.velocity.x === 0 && this.boar.attacking && Phaser.Math.Distance.Between(this.hero.x, this.hero.y, this.boar.x, this.boar.y) > 80) {
+      this.boar.play("boarIdle", true);
     }
 
     if (this.hero.body.x > 1886 && this.hero.body.y > 130 && this.currentLevel === "forest1") {
@@ -543,12 +807,23 @@ export class Game extends Phaser.Scene {
         goblin.setVelocityX(-75)
       }
       else if (goblin.body.blocked.left) {
-        goblin.flipX = false;
         goblin.setVelocityX(75)
+        goblin.flipX = false;
       }
     });
     this.weaponHitbox.x = this.hero.x + (this.hero.flipX ? -17.5 : 17.5);
     this.weaponHitbox.y = this.hero.y - 40;
+
+    this.bossActivationZone.x = this.boar.x + (this.boar.flipX ? -7 : 7);
+    this.bossActivationZone.y = this.boar.y - 52;
+
+    this.bossAerialZone.x = this.boar.x + (this.boar.flipX ? -7 : 7);
+    this.bossAerialZone.y = this.boar.y - 87;
+
+    this.bossGoToZone.x = this.boar.x + (this.boar.flipX ? -7 : 7);
+    this.bossGoToZone.y = this.boar.y - 52;
+
+
 
     if (this.cursors.left.isDown && !this.dashing) {
       if (this.shift.isDown) { // Check if Shift is pressed
@@ -588,11 +863,12 @@ export class Game extends Phaser.Scene {
       // Start jump
       this.isJumping = true;
       this.jumpTimer = 0;
+      this.jumpStartY = this.hero.y
     }
 
     if (this.isJumping && this.Z.isDown && this.jumpTimer < 800) {
       // While Z is held and timer not exceeded, keep setting upward velocity
-      this.hero.setVelocityY(-200);
+      this.hero.setVelocityY(-205.625);
       this.jumpTimer += this.game.loop.delta;
     }
 
@@ -600,6 +876,17 @@ export class Game extends Phaser.Scene {
       // Stop boosting jump if key is released, max time reached, or player is falling
       this.isJumping = false;
     }
+    const yDelta = Math.max(0, this.jumpStartY - this.hero.y); // How far hero has fallen from jump start
+    const maxDelta = 200; // The Y distance over which gravity ramps up
+    const gravityScale = Phaser.Math.Clamp(yDelta / maxDelta, 0, 1);
+    this.heroGravity = this.maxGravity + (this.minGravity - this.maxGravity) * gravityScale
+    if (this.hero.body.velocity.y < 0) {
+      this.hero.body.setGravityY(this.minGravity)
+    }
+    else {
+      this.hero.body.setGravityY(this.heroGravity)
+    }
+
     if (!this.hero.body.blocked.down && !this.attacking && !this.dashing) {
       if (this.hero.body.velocity.y < -20) {
         this.hero.anims.play("jump1", true);
