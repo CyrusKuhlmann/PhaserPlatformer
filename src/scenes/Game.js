@@ -29,6 +29,8 @@ import boarWalk from "/assets/Legacy Enemy - Boar Warrior/Walk/Walk-Sheet-Black.
 import boarAttack from "/assets/Legacy Enemy - Boar Warrior/Attack/Attack-01-Sheet-Black.png"
 import boarDeath from "/assets/Legacy Enemy - Boar Warrior/Die/Die-Sheet-Black.png"
 
+import spikes from "/assets/SpikeSprite.png";
+
 export class Game extends Phaser.Scene {
   constructor() {
     super("Game");
@@ -82,6 +84,10 @@ export class Game extends Phaser.Scene {
     this.load.spritesheet("boarWalk", boarWalk, {
       frameWidth: 80,
       frameHeight: 112,
+    });
+    this.load.spritesheet("spikes", spikes, {
+      frameWidth: 20,
+      frameHeight: 180,
     });
 
     this.load.image("background", background);
@@ -295,6 +301,11 @@ export class Game extends Phaser.Scene {
     this.bossGoToZone.body.allowGravity = false;
 
 
+    this.spikes = this.physics.add
+      .sprite(0, height - 64, "spikes")
+      .setOrigin(0, 1)
+      .setOffset(5, 0)
+      .setSize(10, 180);
 
 
     // creat overlap between the goblin and the player
@@ -602,10 +613,18 @@ export class Game extends Phaser.Scene {
       frameRate: 10,
       repeat: 0,
     });
+    this.anims.create({
+      key: "spikes",
+      frameRate: 30,
+      defaultTextureKey: "spikes",
+      frames: this.anims.generateFrameNumbers("spikes", { frames: [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13] }),
+      repeat: -1,
+    });
 
     this.physics.add.collider(this.hero, this.ground);
     this.physics.add.collider(this.goblins, this.ground);
     this.physics.add.collider(this.boar, this.ground);
+    this.physics.add.collider(this.spikes, this.ground);
 
     // Set up camera
     this.cameras.main.setBounds(
@@ -678,6 +697,7 @@ export class Game extends Phaser.Scene {
   }
 
   update() {
+    this.spikes.anims.play("spikes", true);
     if (!this.physics.overlap(this.hero, this.bossGoToZone)) {
       this.playerReachedBossGoToZone = false;
     }
@@ -705,12 +725,14 @@ export class Game extends Phaser.Scene {
     }
 
     if (this.bossAgro && !this.playerReachedBossGoToZone) {
-      if (this.hero.x < this.boar.x) {
-        this.boar.flipX = false;
-        this.boar.setVelocityX(-80);
-      } else if (this.hero.x > this.boar.x) {
-        this.boar.flipX = true;
-        this.boar.setVelocityX(80);
+      if (!this.boar.attacking) {
+        if (this.hero.x < this.boar.x) {
+          this.boar.flipX = false;
+          this.boar.setVelocityX(-80);
+        } else if (this.hero.x > this.boar.x) {
+          this.boar.flipX = true;
+          this.boar.setVelocityX(80);
+        }
       }
     }
     else if (this.playerReachedBossGoToZone) {
@@ -822,8 +844,6 @@ export class Game extends Phaser.Scene {
 
     this.bossGoToZone.x = this.boar.x + (this.boar.flipX ? -7 : 7);
     this.bossGoToZone.y = this.boar.y - 52;
-
-
 
     if (this.cursors.left.isDown && !this.dashing) {
       if (this.shift.isDown) { // Check if Shift is pressed
