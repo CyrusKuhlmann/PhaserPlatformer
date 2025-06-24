@@ -17,6 +17,14 @@ import background2 from "/assets/Legacy Fantasy - Deep Cave\/Background\/Backgro
 import background3 from "/assets/Legacy Fantasy - Deep Cave\/Background\/Background-3.png"
 import cave1 from "/assets/maps/Cave1.json";
 
+import tilesBattlefield from "/assets/Legacy Fantasy - Dusk Woods\/Assets\/Tiles.png";
+import vegetationBattlefield from "/assets/Legacy Fantasy - Dusk Woods\/Assets\/Vegetation.png"
+import background1Battlefield from "/assets/Legacy Fantasy - Dusk Woods\/BackGround\/Background_0.png"
+import background2Battlefield from "/assets/Legacy Fantasy - Dusk Woods\/BackGround\/Background_1.png"
+import background3Battlefield from "/assets/Legacy Fantasy - Dusk Woods\/BackGround\/Background_2.png"
+import background4Battlefield from "/assets/Legacy Fantasy - Dusk Woods\/BackGround\/Background_3.png"
+import battlefield from "/assets/maps/Battlefield.json";
+
 import collect from "/assets/sounds/collect.mp3";
 import bounce from "/assets/sounds/bounce.mp3";
 import goblinIdle from "/assets/Monsters_Creatures_Fantasy/Goblin/Idle.png"
@@ -24,12 +32,13 @@ import goblinRun from "/assets/Monsters_Creatures_Fantasy/Goblin/Run.png"
 import goblinAttack from "/assets/Monsters_Creatures_Fantasy/Goblin/Attack.png"
 import goblinDeath from "/assets/Monsters_Creatures_Fantasy/Goblin/Death.png"
 
+
 import boarIdle from "/assets/Legacy Enemy - Boar Warrior/Idle/Idle-Sheet-Back.png"
 import boarWalk from "/assets/Legacy Enemy - Boar Warrior/Walk/Walk-Sheet-Black.png"
 import boarAttack from "/assets/Legacy Enemy - Boar Warrior/Attack/Attack-01-Sheet-Black.png"
 import boarDeath from "/assets/Legacy Enemy - Boar Warrior/Die/Die-Sheet-Black.png"
 
-import spikes from "/assets/SpikeSprite.png";
+import spike from "/assets/SpikeSprite.png";
 
 export class Game extends Phaser.Scene {
   constructor() {
@@ -85,7 +94,7 @@ export class Game extends Phaser.Scene {
       frameWidth: 80,
       frameHeight: 112,
     });
-    this.load.spritesheet("spikes", spikes, {
+    this.load.spritesheet("spike", spike, {
       frameWidth: 20,
       frameHeight: 180,
     });
@@ -102,6 +111,13 @@ export class Game extends Phaser.Scene {
     this.load.image("background3", background3);
     this.load.tilemapTiledJSON("cave1", cave1);
     this.load.tilemapTiledJSON("cliff1", cliff1);
+    this.load.image("tilesBattlefield", tilesBattlefield);
+    this.load.image("vegetationBattlefield", vegetationBattlefield);
+    this.load.image("background1Battlefield", background1Battlefield);
+    this.load.image("background2Battlefield", background2Battlefield);
+    this.load.image("background3Battlefield", background3Battlefield);
+    this.load.image("background4Battlefield", background4Battlefield);
+    this.load.tilemapTiledJSON("battlefield", battlefield);
     this.load.audio("collect", collect);
     this.load.audio("bounce", bounce);
   }
@@ -119,7 +135,13 @@ export class Game extends Phaser.Scene {
     const background1 = level.addTilesetImage("Background-1", "background1");
     const background2 = level.addTilesetImage("Background-2", "background2");
     const background3 = level.addTilesetImage("Background-3", "background3");
-    const tilesets = [tiles, background, greenTree, treeAssets, caveTiles, props, background1, background2, background3];
+    const background1Battlefield = level.addTilesetImage("Background1Battlefield", "background1Battlefield");
+    const background2Battlefield = level.addTilesetImage("Background2Battlefield", "background2Battlefield");
+    const background3Battlefield = level.addTilesetImage("Background3Battlefield", "background3Battlefield");
+    const background4Battlefield = level.addTilesetImage("Background4Battlefield", "background4Battlefield");
+    const tilesBattlefield = level.addTilesetImage("TilesBattlefield", "tilesBattlefield");
+    const vegetationBattlefield = level.addTilesetImage("VegetationBattlefield", "vegetationBattlefield");
+    const tilesets = [tiles, background, greenTree, treeAssets, caveTiles, props, background1, background2, background3, background1Battlefield, background2Battlefield, background3Battlefield, background4Battlefield, tilesBattlefield, vegetationBattlefield];
     this.attacking = false;
     this.dashing = false;
     this.jumpTimer = 0;
@@ -181,6 +203,18 @@ export class Game extends Phaser.Scene {
         .setCollisionBetween(1, 10000); // Choose which tile IDs collide
       level.createLayer("Grass (foreground)", tilesets, 0, 0);
     }
+    else if (this.currentLevel === "battlefield") {
+      level.createLayer("Background1Battlefield", tilesets, 0, 0).setScrollFactor(0.1, 0);
+      level.createLayer("Background2Battlefield", tilesets, 0, 0).setScrollFactor(0.3, 0);
+      level.createLayer("Background3Battlefield", tilesets, 0, 0).setScrollFactor(0.4, 0);
+      level.createLayer("Background4Battlefield", tilesets, 0, 0).setScrollFactor(0.5, 0);
+      level.createLayer("BackgroundTrees1Battlefield", tilesets, 0, 0).setScrollFactor(0.7, 0);
+      level.createLayer("BackgroundTrees2Battlefield", tilesets, 0, 0).setScrollFactor(0.75, 0);
+      this.ground = level
+        .createLayer("GroundBattlefield", tilesets, 0, 0)
+        .setCollisionBetween(1, 10000); // Choose which tile IDs collide
+      level.createLayer("GrassBattlefield", tilesets, 0, 0);
+    }
 
     this.hero = this.physics.add
       .sprite(this.spawnX, this.spawnY, "viking")
@@ -219,10 +253,7 @@ export class Game extends Phaser.Scene {
       fill: '#ffffff'
     }).setOrigin(0, 0).setScrollFactor(0);
 
-    this.goblins = this.physics.add.group({
-      classType: Phaser.Physics.Arcade.Sprite,
-      runChildUpdate: true, // Update children automatically
-    });
+    this.goblins = this.physics.add.group();
 
 
     level.getObjectLayer("Enemies").objects.forEach((enemy) => {
@@ -265,12 +296,11 @@ export class Game extends Phaser.Scene {
 
     // Create boar enemy
     this.boar = this.physics.add
-      .sprite(200, 50, "boarIdle")
+      .sprite(800, 350, "boarIdle")
       .setOrigin(0.5, 1)
       .setBounce(0)
       .setScale(1)
       .setCollideWorldBounds(true);
-    //this.boar.body.setSize(45, 60).setOffset((this.boar.flipX ? 0 : 7), 2);
     this.boar.jumpedBack = false;
 
     this.bossActivationZone = this.physics.add
@@ -301,11 +331,45 @@ export class Game extends Phaser.Scene {
     this.bossGoToZone.body.allowGravity = false;
 
 
-    this.spikes = this.physics.add
-      .sprite(0, height - 64, "spikes")
-      .setOrigin(0, 1)
-      .setOffset(5, 0)
-      .setSize(10, 180);
+    if (this.currentLevel !== "battlefield") {
+      this.boar.setVisible(false);
+      this.boar.body.enable = false;
+
+      this.bossActivationZone.setVisible(false);
+      this.bossActivationZone.body.enable = false;
+
+      this.bossAerialZone.setVisible(false);
+      this.bossAerialZone.body.enable = false;
+
+      this.bossGoToZone.setVisible(false);
+      this.bossGoToZone.body.enable = false;
+    } else {
+      this.boar.setVisible(true);
+      this.boar.body.enable = true;
+
+      this.bossActivationZone.setVisible(false);
+      this.bossActivationZone.body.enable = true;
+
+      this.bossAerialZone.setVisible(false);
+      this.bossAerialZone.body.enable = true;
+
+      this.bossGoToZone.setVisible(false);
+      this.bossGoToZone.body.enable = true;
+    }
+
+    this.spikes = this.physics.add.group()
+    const spike = this.physics.add
+      .sprite(100, height - 50, "spike")
+      .setOrigin(0.5, 1)
+    spike.body.setSize(20, 180).setOffset(0, 0);
+    this.spikes.add(spike);
+    this.spikes.getChildren().forEach(spike => {
+      spike.body.setSize(20, 180).setOffset(0, 0);
+      spike.body.allowGravity = false;
+    });
+
+
+
 
 
     // creat overlap between the goblin and the player
@@ -394,6 +458,7 @@ export class Game extends Phaser.Scene {
             });
             return;
           }
+
           const oldVelocity = boar.body.velocity.x;
           if (boar.flipX) { // boar is facing left
             hero.setVelocityX(-200);
@@ -614,10 +679,10 @@ export class Game extends Phaser.Scene {
       repeat: 0,
     });
     this.anims.create({
-      key: "spikes",
+      key: "spike",
       frameRate: 30,
-      defaultTextureKey: "spikes",
-      frames: this.anims.generateFrameNumbers("spikes", { frames: [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13] }),
+      defaultTextureKey: "spike",
+      frames: this.anims.generateFrameNumbers("spike", { frames: [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13] }),
       repeat: -1,
     });
 
@@ -697,7 +762,6 @@ export class Game extends Phaser.Scene {
   }
 
   update() {
-    this.spikes.anims.play("spikes", true);
     if (!this.physics.overlap(this.hero, this.bossGoToZone)) {
       this.playerReachedBossGoToZone = false;
     }
@@ -808,6 +872,17 @@ export class Game extends Phaser.Scene {
       });
       return;
     }
+    if (this.hero.body.x > 925 && this.currentLevel === "cliff1") {
+      this.cameras.main.fadeOut(250);
+      this.scene.restart({
+        spawnX: 25,
+        spawnY: 337,
+        currentLevel: "battlefield",
+        health: this.health,
+      });
+      return;
+    }
+
     this.goblins.getChildren().forEach(goblin => {
       const edgeOffset = goblin.flipX ? -goblin.body.width / 2 - 1 : goblin.body.width / 2 + 1;
       const checkX = goblin.x + edgeOffset;
@@ -832,6 +907,38 @@ export class Game extends Phaser.Scene {
         goblin.setVelocityX(75)
         goblin.flipX = false;
       }
+    });
+
+    this.spikes.getChildren().forEach(spike => {
+      if (this.physics.overlap(this.hero, spike)) {
+        if (!this.hero.hit) {
+          this.hero.hit = true; // Prevent multiple hits
+          this.sound.play("bounce");
+          this.health = Math.max(0, this.health - 10);
+          if (this.health <= 0) {
+            this.cameras.main.fadeOut(1);
+            // on fade out complete, restart the scene
+            this.cameras.main.once("camerafadeoutcomplete", () => {
+              this.time.delayedCall(1000, () => {
+                this.scene.restart({
+                  spawnX: 200,
+                  spawnY: 300,
+                  currentLevel: "forest1",
+                  health: this.hero.MaxHealth,
+                  flashing: true,
+                });
+              });
+            });
+            return;
+          }
+          this.hero.setTint(0xff0000);
+          this.time.delayedCall(500, () => {
+            this.hero.hit = false; // Reset hit state after delay
+            this.hero.clearTint();
+          });
+        }
+      }
+      spike.play("spike", true);
     });
     this.weaponHitbox.x = this.hero.x + (this.hero.flipX ? -17.5 : 17.5);
     this.weaponHitbox.y = this.hero.y - 40;
