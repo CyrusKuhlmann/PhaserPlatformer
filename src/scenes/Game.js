@@ -152,6 +152,7 @@ export class Game extends Phaser.Scene {
     this.maxGravity = 900
     this.bossAgro = false;
     this.playerReachedBossGoToZone = false;
+    this.attackCount = 0
 
 
 
@@ -291,9 +292,6 @@ export class Game extends Phaser.Scene {
     this.weaponHitbox.body.allowGravity = false;
 
 
-
-
-
     // Create boar enemy
     this.boar = this.physics.add
       .sprite(800, 350, "boarIdle")
@@ -358,15 +356,22 @@ export class Game extends Phaser.Scene {
     }
 
     this.spikes = this.physics.add.group()
-    const spike = this.physics.add
-      .sprite(100, height - 50, "spike")
-      .setOrigin(0.5, 1)
-    spike.body.setSize(20, 180).setOffset(0, 0);
-    this.spikes.add(spike);
-    this.spikes.getChildren().forEach(spike => {
-      spike.body.setSize(20, 180).setOffset(0, 0);
-      spike.body.allowGravity = false;
-    });
+    if (this.currentLevel === "battlefield") {
+      for (let i = 0; i < 9; i++) {
+        const spike = this.physics.add
+          .sprite(192 + i * 80, height - 16, "spike")
+          .setOrigin(0.5, 1)
+          .setVisible(false)
+        spike.body.setSize(20, 180).setOffset(0, 0);
+        this.spikes.add(spike);
+        spike.body.allowGravity = false;
+        spike.on("animationcomplete", (anim) => {
+          spike.setVisible(false);
+          spike.body.enable = false;
+        });
+      }
+    }
+
 
 
 
@@ -683,7 +688,7 @@ export class Game extends Phaser.Scene {
       frameRate: 30,
       defaultTextureKey: "spike",
       frames: this.anims.generateFrameNumbers("spike", { frames: [0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 6, 6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13] }),
-      repeat: -1,
+      repeat: 0,
     });
 
     this.physics.add.collider(this.hero, this.ground);
@@ -800,7 +805,10 @@ export class Game extends Phaser.Scene {
       }
     }
     else if (this.playerReachedBossGoToZone) {
-      this.boar.setVelocityX(0);
+      if (!this.attackCount >= 5) {
+        this.boar.setVelocityX(0);
+        console.log("boarstopped")
+      }
       if (this.hero.x < this.boar.x) {
         this.boar.flipX = false;
       } else if (this.hero.x > this.boar.x) {
@@ -812,9 +820,13 @@ export class Game extends Phaser.Scene {
       this.boar.attacking = true;
       this.boar.on("animationcomplete", (anim) => {
         if (anim.key === "boarAttack") {
-          this.boar.attacking = false;
-        } else if (anim.key === "boarDeath") {
-          this.boar.destroy();
+          this.boar.attacking = false
+          this.attackCount += 1
+          console.log(this.attackCount)
+          if (this.attackCount >= 5) {
+            this.boar.setVelocityX(100)
+            this.boar.setVelocityY(-80)
+          }
         }
       });
     } else if (!this.boar.attacking) {
@@ -911,7 +923,7 @@ export class Game extends Phaser.Scene {
 
     this.spikes.getChildren().forEach(spike => {
       if (this.physics.overlap(this.hero, spike)) {
-        if (!this.hero.hit) {
+        if (!this.hero.hit && spike.anims.currentFrame && spike.anims.currentFrame.textureFrame === 8) {
           this.hero.hit = true; // Prevent multiple hits
           this.sound.play("bounce");
           this.health = Math.max(0, this.health - 10);
